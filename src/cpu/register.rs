@@ -1,4 +1,4 @@
-use crate::cpu::status_register::StatusRegister;
+use super::status_register::StatusRegister;
 
 #[derive(Debug)]
 pub struct Registers {
@@ -20,6 +20,11 @@ impl Registers {
             stack_pointer: 0,
             status: StatusRegister::new(),
         }
+    }
+
+    pub fn reset(&mut self) {
+        self.stack_pointer = 0xFF;
+        self.status().set(0x34);
     }
 
     pub fn increment_pc(&mut self, increment_amount: u16) -> u16 {
