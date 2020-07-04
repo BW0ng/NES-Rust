@@ -1,5 +1,5 @@
 [package]
-name = "NES-Rust"
+name = "nes_rust"
 version = "0.1.0"
 authors = ["Brandon <brandon.wong@okstate.edu>"]
 edition = "2018"

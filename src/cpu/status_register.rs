@@ -47,6 +47,33 @@ impl StatusRegister {
     }
 }
 
+// Getters and Setters
+// TODO Remove dead code linting
+#[allow(dead_code)]
+impl StatusRegister {
+    pub fn negative(&self) -> bool {
+        self.negative
+    }
+    pub fn overflow(&self) -> bool {
+        self.overflow
+    }
+    pub fn b_flag_2(&self) -> bool {
+        self.b_flag_2
+    }
+    pub fn b_flag_1(&self) -> bool {
+        self.b_flag_1
+    }
+    pub fn decimal(&self) -> bool {
+        self.decimal
+    }
+    pub fn zero(&self) -> bool {
+        self.zero
+    }
+    pub fn carry(&self) -> bool {
+        self.carry
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
