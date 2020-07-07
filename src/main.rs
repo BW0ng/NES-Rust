@@ -14,7 +14,7 @@ fn main() {
     println!("Hello, world!");
     let mut memory = Memory::new();
     let mut register = Registers::new();
-    alu::operate(0, 0, false, 0, 0b000_000_01, &mut register, &mut memory);
+    alu::operate(0, 0, false, 0b000_000_01, &mut register, &mut memory);
     memory.print();
     memory.print_value(0xFFFF);
 }

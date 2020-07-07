@@ -35,7 +35,7 @@ impl StatusRegister {
         self.carry = false;
     }
 
-    pub fn set(&mut self, x: u8) {
+    pub fn set(&mut self, x: u8) -> u8 {
         self.negative = ((x & 0b1000_0000) >> 7) == 1;
         self.overflow = ((x & 0b0100_0000) >> 6) == 1;
         self.b_flag_2 = ((x & 0b0010_0000) >> 5) == 1;
@@ -44,6 +44,22 @@ impl StatusRegister {
         self.interrupt_disable = ((x & 0b0000_0100) >> 2) == 1;
         self.zero = ((x & 0b0000_0010) >> 1) == 1;
         self.carry = (x & 0b0000_0001) == 1;
+
+        self.get_status()
+    }
+
+    pub fn get_status(self: &Self) -> u8 {
+        let mut value: u8 = 0;
+
+        value |= if self.negative { 1 << 7 } else { 0 };
+        value |= if self.overflow() { 1 << 6 } else { 0 };
+        value |= if self.b_flag_2 { 1 << 5 } else { 0 };
+        value |= if self.b_flag_1 { 1 << 4 } else { 0 };
+        value |= if self.decimal { 1 << 3 } else { 0 };
+        value |= if self.interrupt_disable { 1 << 2 } else { 0 };
+        value |= if self.zero { 1 << 1 } else { 0 };
+        value |= if self.carry { 1 << 0 } else { 0 };
+        value
     }
 }
 
@@ -240,5 +256,14 @@ mod tests {
         assert_eq!(false, status_register.interrupt_disable);
         assert_eq!(false, status_register.zero);
         assert_eq!(true, status_register.carry);
+    }
+    #[test]
+    fn test_get_status() {
+        let mut status_register = StatusRegister::new();
+
+        for x in 0..255 {
+            status_register.set(x);
+            assert_eq!(x, status_register.get_status());
+        }
     }
 }

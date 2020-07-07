@@ -75,8 +75,25 @@ impl Registers {
     pub fn set_stack_pointer(&mut self, stack_pointer: u8) {
         self.stack_pointer = stack_pointer
     }
-    pub fn set_status(&mut self, status: StatusRegister) {
-        self.status = status
+    pub fn set_status(&mut self, status: u8) {
+        self.status.set(status);
+    }
+    pub fn modify_status(&mut self, status: u8) {
+        self.status.set(self.status.get_status() | status);
+    }
+    pub fn set_carry(&mut self, carry: bool) {
+        if carry {
+            self.modify_status(0b0000_0001);
+        } else {
+            self.modify_status(0b0000_0000);
+        }
+    }
+    pub fn set_overflow(&mut self, overflow: bool) {
+        if overflow {
+            self.modify_status(0b0100_0000);
+        } else {
+            self.modify_status(0b0000_0000);
+        }
     }
 }
 

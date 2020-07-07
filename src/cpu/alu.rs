@@ -17,14 +17,15 @@ use super::register::Registers;
  * 111 - absolute, X
  *
  * http://www.cs.columbia.edu/~sedwards/classes/2013/4840/reports/6502.pdf
+ * http://www.6502.org/tutorials/6502opcodes.html
  *
  * Returns (results, carry, overflow)
  */
+#[allow(overflowing_literals)]
 pub fn operate(
     a: u8,
     b: u8,
     cin: bool,
-    status: u8,
     opcode: u8,
     register: &mut Registers,
     memory: &mut Memory,
@@ -59,7 +60,15 @@ pub fn operate(
         0b000_111_01 => println!("ORA abs, X"),
         // A - 0, C - 2
         0b000_001_10 => println!("ASL zpg"),
-        0b000_010_10 => println!("ASL A"),
+        0b000_010_10 => {
+            println!("ASL A");
+            let shifted: u8 = a << 1;
+            let carry: bool = ((a & 0b1000_0000) >> 7) == 1;
+            register.set_carry(carry);
+            let overflow: bool = shifted < a; // TODO Need to figure out how to do overflow
+            register.set_overflow(overflow);
+            return (shifted, carry, overflow);
+        }
         0b000_011_10 => println!("ASL abs"),
         0b000_101_10 => println!("ASL zpg, X"),
         0b000_111_10 => println!("ASL abs, X"),
@@ -230,3 +239,39 @@ pub fn operate(
 //         0 =>
 //     }
 // }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_operate_asl_a() {
+        let mut register = Registers::new();
+        let mut memory = Memory::new();
+
+        let (output, carry, overflow) = crate::cpu::alu::operate(
+            0b0000_0001,
+            0b0000_0100,
+            false,
+            0b000_010_10,
+            &mut register,
+            &mut memory,
+        );
+        assert_eq!(0b000_0010, output);
+        assert_eq!(false, carry);
+        assert_eq!(false, overflow);
+        assert_eq!(0b0000_0000, register.status().get_status());
+
+        let (output, carry, overflow) = crate::cpu::alu::operate(
+            0b1000_0000,
+            0b0000_0100,
+            false,
+            0b000_010_10,
+            &mut register,
+            &mut memory,
+        );
+        assert_eq!(0b0000_0000, output);
+        assert_eq!(true, carry);
+        assert_eq!(true, overflow);
+        assert_eq!(0b0100_0001, register.status().get_status());
+    }
+}
