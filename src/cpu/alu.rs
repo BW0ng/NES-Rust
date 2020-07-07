@@ -1,5 +1,6 @@
 use super::memory::Memory;
 use super::register::Registers;
+use super::opcodes::Opcodes;
 
 /**
  * AAABBBCC
@@ -21,7 +22,6 @@ use super::register::Registers;
  *
  * Returns (results, carry, overflow)
  */
-#[allow(overflowing_literals)]
 pub fn operate(
     a: u8,
     b: u8,
@@ -39,7 +39,7 @@ pub fn operate(
     //     let enable_barrel_shift_right: bool = helper::bit_set(opcode, 0);
     match opcode {
         // A - 0 C - 0
-        0b000_000_00 => {
+        Opcodes::BRK_IMPL => {
             println!("BRK impl");
             // TODO interrupt
         }
