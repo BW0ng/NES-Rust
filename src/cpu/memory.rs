@@ -6,9 +6,9 @@ impl Memory {
     pub fn new() -> Memory {
         Memory { memory: [0; 65536] }
     }
-    pub fn print(self: &Self) {
+    pub fn print(self: &Self, start: Option<usize>, end: Option<usize>) {
         let mut debug_string = String::new();
-        for x in 0..self.memory.len() {
+        for x in start.unwrap_or(0)..end.unwrap_or(self.memory.len()) {
             debug_string.push_str(&format!("{:04X}: {value}, ", x, value = self.memory[x]));
             if x != 0 && (x + 1) % 16 == 0 {
                 debug_string.push_str("\n");
@@ -22,5 +22,8 @@ impl Memory {
             memory_address,
             value = self.memory[memory_address]
         )
+    }
+    pub fn set(&mut self, address: usize, value: u8) {
+        self.memory[address] = value;
     }
 }
