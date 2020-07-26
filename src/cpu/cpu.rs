@@ -1,540 +1,361 @@
-pub struct CPU {
-    register: Registers,
-    memory: Memory,
+use super::cpu_debug::{INSTRUCTION_NAMES, INSTRUCTION_SIZES};
+use crate::bus::bus::Bus;
+
+use std::fmt::Write;
+use std::convert::TryInto;
+#[allow(dead_code)]
+// #region
+enum Flag {
+    Carry = 0b00000001,
+    Zero = 0b00000010,
+    IrqDisable = 0b00000100,
+    Decimal = 0b00001000,
+    Break = 0b00010000,
+    Push = 0b00100000,
+    Overflow = 0b01000000,
+    Negative = 0b10000000,
 }
 
+#[allow(dead_code)]
+enum Mode {
+    Immediate,
+    ZeroPage,
+    ZeroPageX,
+    ZeroPageY,
+    Absolute,
+    AbsoluteX,
+    AbsoluteXForceTick,
+    AbsoluteYForceTick,
+    AbsoluteY,
+    Indirect,
+    IndirectX,
+    IndirectY,
+    IndirectYForceTick,
+    NoMode,
+}
+
+// TODO Implement Interrupts
+#[allow(dead_code)]
+pub struct CPU {
+    pub bus: Bus,
+    pc: u16,
+    stack_pointer: u8,
+    a: u8,
+    x: u8,
+    y: u8,
+    status: u8,
+}
+
+#[allow(dead_code)]
 impl CPU {
-    pub fn reset(&mut self, register) {
-        register.reset();
-    }
-    pub fn operate(opcode: u8, address: usize) {
-        match opcode {
-            // A - 0 C - 0
-            0b000_000_00 => {
-                println!("BRK impl");
-                // TODO interrupt
-            }
-            0b000_010_00 => {
-                println!("PHP impl");
-            }
-            0b000_100_00 => {
-                println!("BPL rel");
-            }
-            0b000_110_00 => {
-                println!("CLC impl");
-            }
-            // A - 0, C - 1
-            0b000_000_01 => {
-                println!("ORA X, ind");
-                memory.set(0xFFFF, 1);
-            }
-            0b000_001_01 => {
-                println!("ORA zpg");
-            }
-            0b000_010_01 => {
-                println!("ORA #");
-            }
-            0b000_011_01 => {
-                println!("ORA abs");
-            }
-            0b000_100_01 => {
-                println!("ORA ind, Y");
-            }
-            0b000_101_01 => {
-                println!("ORA zpg, X");
-            }
-            0b000_110_01 => {
-                println!("ORA abs, Y");
-            }
-            0b000_111_01 => {
-                println!("ORA abs, X");
-            }
-            // A - 0, C - 2
-            0b000_001_10 => {
-                println!("ASL zpg");
-            }
-            0b000_010_10 => {
-                println!("ASL A");
-                let shifted: u8 = a << 1;
-                let carry: bool = ((a & 0b1000_0000) >> 7) == 1;
-                register.set_carry(carry);
-                let overflow: bool = shifted < a; // TODO Need to figure out how to do overflow
-                register.set_overflow(overflow);
-                return (shifted, carry, overflow);
-            }
-            0b000_011_10 => {
-                println!("ASL abs");
-            }
-            0b000_101_10 => {
-                println!("ASL zpg, X");
-            }
-            0b000_111_10 => {
-                println!("ASL abs, X");
-            }
-            // A - 1 C - 0
-            0b001_000_00 => {
-                println!("JSR abs");
-            }
-            0b001_001_00 => {
-                println!("BIT zpg");
-                let value: u8 = memory.memory[]
-            }
-            0b001_010_00 => {
-                println!("PLP impl");
-            }
-            0b001_011_00 => {
-                println!("BIT abs");
-            }
-            0b001_100_00 => {
-                println!("BMI rel");
-            }
-            0b001_110_00 => {
-                println!("SEC impl");
-            }
-            // A - 1, C - 1
-            0b001_000_01 => {
-                println!("AND X, ind");
-            }
-            0b001_001_01 => {
-                println!("AND zpy");
-            }
-            0b001_010_01 => {
-                println!("AND #");
-            }
-            0b001_011_01 => {
-                println!("AND abs");
-            }
-            0b001_100_01 => {
-                println!("AND ind, Y");
-            }
-            0b001_101_01 => {
-                println!("AND zpg, X");
-            }
-            0b001_110_01 => {
-                println!("AND abs, Y");
-            }
-            0b001_111_01 => {
-                println!("AND abs, X");
-            }
-            // A - 1, C - 2
-            0b001_001_10 => {
-                println!("ROL zpg");
-            }
-            0b001_010_10 => {
-                println!("ROL A");
-            }
-            0b001_011_10 => {
-                println!("ROL abs");
-            }
-            0b001_101_10 => {
-                println!("ROL zpg, X");
-            }
-            0b001_111_10 => {
-                println!("ROL abs, X");
-            }
-            // A - 2 C - 0
-            0b010_000_00 => {
-                println!("RTI impl");
-            }
-            0b010_010_00 => {
-                println!("PHA impl");
-            }
-            0b010_011_00 => {
-                println!("JMP abs");
-            }
-            0b010_100_00 => {
-                println!("BVC rel");
-            }
-            0b010_110_00 => {
-                println!("CLI impl");
-            }
-            // A - 2, C - 1
-            0b010_000_01 => {
-                println!("EOR X, ind");
-            }
-            0b010_001_01 => {
-                println!("EOR zpg");
-            }
-            0b010_010_01 => {
-                println!("EOR #");
-            }
-            0b010_011_01 => {
-                println!("EOR abs");
-            }
-            0b010_100_01 => {
-                println!("EOR ind, Y");
-            }
-            0b010_101_01 => {
-                println!("EOR zpg, X");
-            }
-            0b010_110_01 => {
-                println!("EOR abs, Y");
-            }
-            0b010_111_01 => {
-                println!("EOr abs, X");
-            }
-            // A - 2, C - 2
-            0b010_001_10 => {
-                println!("ROR zpg");
-            }
-            0b010_010_10 => {
-                println!("ROR A");
-            }
-            0b010_011_10 => {
-                println!("ROR abs");
-            }
-            0b010_101_10 => {
-                println!("ROR zpg, X");
-            }
-            0b010_111_10 => {
-                println!("ROR abs, X");
-            }
-            // A - 3 C - 0
-            0b011_000_00 => {
-                println!("RTS impl");
-            }
-            0b011_010_00 => {
-                println!("PLA impl");
-            }
-            0b011_011_00 => {
-                println!("JMP ind");
-            }
-            0b011_100_00 => {
-                println!("BVS rel");
-            }
-            0b011_110_00 => {
-                println!("SEI impl");
-            }
-            // A - 3, C - 1
-            0b011_000_01 => {
-                println!("ADC X, ind");
-            }
-            0b011_001_01 => {
-                println!("ADC zpg");
-            }
-            0b011_010_01 => {
-                println!("ADC #");
-            }
-            0b011_011_01 => {
-                println!("ADC abs");
-            }
-            0b011_100_01 => {
-                println!("ADC ind, Y");
-            }
-            0b011_101_01 => {
-                println!("ADC zpg, X");
-            }
-            0b011_110_01 => {
-                println!("ADC abs, Y");
-            }
-            0b011_111_01 => {
-                println!("ADC abs, X");
-            }
-            // A - 3, C - 2
-            0b011_001_10 => {
-                println!("ROR zpg");
-            }
-            0b011_010_10 => {
-                println!("ROR A");
-            }
-            0b011_011_10 => {
-                println!("ROR abs");
-            }
-            0b011_101_10 => {
-                println!("ROR zpg, X");
-            }
-            0b011_111_10 => {
-                println!("ROR abs, X");
-            }
-            // A - 4 C - 0
-            0b100_001_00 => {
-                println!("STY zpg");
-            }
-            0b100_010_00 => {
-                println!("DEY impl");
-            }
-            0b100_011_00 => {
-                println!("STY abs");
-            }
-            0b100_100_00 => {
-                println!("BCC rel");
-            }
-            0b100_101_00 => {
-                println!("STY zpg, X");
-            }
-            0b100_110_00 => {
-                println!("TYA impl");
-            }
-            // A - 4, C - 1
-            0b100_000_01 => {
-                println!("STA X, ind");
-            }
-            0b100_001_01 => {
-                println!("STA zpg");
-            }
-            0b100_011_01 => {
-                println!("STA abs");
-            }
-            0b100_100_01 => {
-                println!("STA ind, Y");
-            }
-            0b100_101_01 => {
-                println!("STA ind, X");
-            }
-            0b100_110_01 => {
-                println!("STA abs, Y");
-            }
-            0b100_111_01 => {
-                println!("STA abs, X");
-            }
-            // A - 4, C - 2
-            0b100_001_10 => {
-                println!("STX zpg");
-            }
-            0b100_010_10 => {
-                println!("TXA impl");
-            }
-            0b100_011_10 => {
-                println!("STX abs");
-            }
-            0b100_101_10 => {
-                println!("STX zpg, Y");
-            }
-            0b100_110_10 => {
-                println!("TXS impl");
-            }
-            // A - 5 C - 0
-            0b101_000_00 => {
-                println!("LDY #");
-            }
-            0b101_001_00 => {
-                println!("LDY zpg");
-            }
-            0b101_010_00 => {
-                println!("TAY impl");
-            }
-            0b101_011_00 => {
-                println!("LDY abs");
-            }
-            0b101_100_00 => {
-                println!("BCS rel");
-            }
-            0b101_101_00 => {
-                println!("LDY zpg, X");
-            }
-            0b101_110_00 => {
-                println!("CLV impl");
-            }
-            0b101_111_00 => {
-                println!("LDY abs, X");
-            }
-            // A - 5, C - 1
-            0b101_000_01 => {
-                println!("LDA X, ind");
-            }
-            0b101_001_01 => {
-                println!("LDA zpg");
-            }
-            0b101_010_01 => {
-                println!("LDA #");
-            }
-            0b101_011_01 => {
-                println!("LDA abs");
-            }
-            0b101_100_01 => {
-                println!("LDA ind, Y");
-            }
-            0b101_101_01 => {
-                println!("LDA zpg, X");
-            }
-            0b101_110_01 => {
-                println!("LDA abs, Y");
-            }
-            0b101_111_01 => {
-                println!("LDA abs, X");
-            }
-            // A - 5, C - 2
-            0b101_000_10 => {
-                println!("LDX #");
-            }
-            0b101_001_10 => {
-                println!("LDX zpg");
-            }
-            0b101_010_10 => {
-                println!("TAX impl");
-            }
-            0b101_011_10 => {
-                println!("LDX abs");
-            }
-            0b101_101_10 => {
-                println!("LDX zpg, Y");
-            }
-            0b101_110_10 => {
-                println!("TSX impl");
-            }
-            0b101_111_10 => {
-                println!("LDX abs, Y");
-            }
-            // A - 6 C - 0
-            0b110_000_00 => {
-                println!("CPY #");
-            }
-            0b110_001_00 => {
-                println!("CPY zgp");
-            }
-            0b110_010_00 => {
-                println!("INY impl");
-            }
-            0b110_011_00 => {
-                println!("CPY abs");
-            }
-            0b110_100_00 => {
-                println!("BNE rel");
-            }
-            0b110_110_00 => {
-                println!("CLD impl");
-            }
-            // A - 6, C - 1
-            0b110_000_01 => {
-                println!("CMP X, ind");
-            }
-            0b110_001_01 => {
-                println!("CMP zpg");
-            }
-            0b110_010_01 => {
-                println!("CMP #");
-            }
-            0b110_011_01 => {
-                println!("CMP abs");
-            }
-            0b110_100_01 => {
-                println!("CMP ind, Y");
-            }
-            0b110_101_01 => {
-                println!("CMP zpg, X");
-            }
-            0b110_110_01 => {
-                println!("CMP abs, Y");
-            }
-            0b110_111_01 => {
-                println!("CMP abs, X");
-            }
-            // A - 6, C - 2
-            0b110_001_10 => {
-                println!("DEC zpg");
-            }
-            0b110_010_10 => {
-                println!("DEX impl");
-            }
-            0b110_011_10 => {
-                println!("DEC abs");
-            }
-            0b110_101_10 => {
-                println!("DEC zpg, X");
-            }
-            0b110_111_10 => {
-                println!("DEC abs, X");
-            }
-            // A - 7 C - 0
-            0b111_000_00 => {
-                println!("CPX #");
-            }
-            0b111_001_00 => {
-                println!("CPX zpg");
-            }
-            0b111_010_00 => {
-                println!("INX impl");
-            }
-            0b111_011_00 => {
-                println!("CPX abs");
-            }
-            0b111_100_00 => {
-                println!("BEQ rel");
-            }
-            0b111_110_00 => {
-                println!("SED impl");
-            }
-            // A - 7, C - 1
-            0b111_000_01 => {
-                println!("SBC X, ind");
-            }
-            0b111_001_01 => {
-                println!("SBC zpg");
-            }
-            0b111_010_01 => {
-                println!("SBC #");
-            }
-            0b111_011_01 => {
-                println!("SBC abs");
-            }
-            0b111_100_01 => {
-                println!("SBC ind, Y");
-            }
-            0b111_101_01 => {
-                println!("SBC zpg, X");
-            }
-            0b111_110_01 => {
-                println!("SBC abs, Y");
-            }
-            0b111_111_01 => {
-                println!("SBC abs, X");
-            }
-            // A - 7, C - 2
-            0b111_001_10 => {
-                println!("INC zpg");
-            }
-            0b111_010_10 => {
-                println!("NOP impl");
-            }
-            0b111_011_10 => {
-                println!("INC abs");
-            }
-            0b111_101_10 => {
-                println!("INC zpg, X");
-            }
-            0b111_111_10 => {
-                println!(" INC abs, Xs");
-            }
-            // Designed to catch any weird cases.
-            _ => {
-                println!("Unknown opcode: {:#08b}", opcode);
-            }
+    pub fn new(bus:Bus) -> Self {
+        CPU {
+            bus: bus,
+            pc: 0,
+            stack_pointer: 0,
+            a: 0,
+            x: 0,
+            y: 0,
+            status: 0,
         }
     }
-}
+    pub fn reset(&mut self) {
+        self.stack_pointer = 0xFF;
+        /*
+         * Sets the status register to 0x34 (0b0011_0100)
+         * Negative - 0
+         * Overflow - 0
+         * B Flag 1 - 1
+         * B Flag 0 - 1
+         * Decimal - 0
+         * Interrupt Disable - 1
+         * Zero - 0
+         * Carry - 0
+         */
+        self.status = 0b00110100
+    }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn test_operate_asl_a() {
-        let mut register = Registers::new();
-        let mut memory = Memory::new();
+    /* Stack starts at 0x100 */
+    fn pop_byte(&mut self) -> u8 {
+        self.stack_pointer = self.stack_pointer.wrapping_add(1);
+        let address = 0x100 + self.stack_pointer as u16;
+        self.bus.read_byte(address)
+    }
 
-        let (output, carry, overflow) = crate::cpu::alu::operate(
-            0b0000_0001,
-            0b0000_0100,
-            false,
-            0b000_010_10,
-            &mut register,
-            &mut memory,
-        );
-        assert_eq!(0b000_0010, output);
-        assert_eq!(false, carry);
-        assert_eq!(false, overflow);
-        assert_eq!(0b0000_0000, register.status().get_status());
+    fn pop_word(&mut self) -> u16 {
+        self.pop_byte() as u16 | (self.pop_byte() as u16) << 8
+    }
 
-        let (output, carry, overflow) = crate::cpu::alu::operate(
-            0b1000_0000,
-            0b0000_0100,
-            false,
-            0b000_010_10,
-            &mut register,
-            &mut memory,
-        );
-        assert_eq!(0b0000_0000, output);
-        assert_eq!(true, carry);
-        assert_eq!(true, overflow);
-        assert_eq!(0b0100_0001, register.status().get_status());
+    /* Stack starts at 0x100 */
+    fn push_byte(&mut self, value: u8) {
+        let address = 0x100 + self.stack_pointer as u16;
+        self.bus.write_byte(address, value);
+        self.stack_pointer = self.stack_pointer.wrapping_sub(1);
+    }
+
+    fn push_word(&mut self, value: u16) {
+        // 6502 is Big Endian
+        self.push_byte((value >> 8) as u8);
+        self.push_byte(value as u8);
+    }
+
+    fn increment_pc(&mut self) {
+        self.pc = self.pc.wrapping_add(1);
+    }
+
+    fn next_byte(&mut self) -> u8 {
+        let starting_pc = self.pc;
+        self.increment_pc();
+        self.bus.read_byte(starting_pc)
+    }
+
+    fn next_word(&mut self) -> u16 {
+        let starting_pc = self.pc;
+        self.increment_pc();
+        self.increment_pc();
+        self.bus.read_word(starting_pc)
+    }
+
+    fn get_flag(&self, flag: Flag) -> bool {
+        self.status & (flag as u8) != 0
+    }
+
+    fn set_flag(&mut self, flag: Flag, value: bool) {
+        if value {
+            self.status |= flag as u8;
+        } else {
+            self.status &= !(flag as u8);
+        }
+    }
+
+    fn set_flags_zero_negative(&mut self, value: u8) {
+        self.set_flag(Flag::Zero, value == 0);
+        self.set_flag(Flag::Negative, (value & 0b1000_0000) != 0);
+    }
+
+    fn set_flags_carry_overflow(&mut self, m: u8, n: u8, result: u16) {
+        self.set_flag(Flag::Carry, result > 0xFF);
+        let r = result as u8;
+        // formula found here: http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
+        self.set_flag(Flag::Overflow, (m ^ r) & (n ^ r) & 0b1000_0000 != 0)
+    }
+
+    // http://www.obelisk.me.uk/6502/addressing.html
+    fn operand_address(&mut self, mode: Mode) -> u16 {
+        match mode {
+            Mode::Immediate => {
+                let starting_pc = self.pc;
+                self.increment_pc();
+                starting_pc
+            }
+            Mode::ZeroPage => self.next_byte() as u16,
+            Mode::ZeroPageX => {
+                self.bus.tick();
+                low_byte(offset(self.next_byte(), self.x))
+            }
+            Mode::ZeroPageY => {
+                self.bus.tick();
+                low_byte(offset(self.next_byte(), self.y))
+            }
+            Mode::Absolute => self.next_word(),
+            Mode::AbsoluteX => {
+                let base = self.next_word();
+                if cross(base, self.x) {
+                    // Ticking if x isn't zero.
+                    self.bus.tick();
+                };
+                offset(base, self.x)
+            }
+            Mode::AbsoluteXForceTick => {
+                self.bus.tick();
+                offset(self.next_word(), self.x)
+            }
+            Mode::AbsoluteY => {
+                let base = self.next_word();
+                if cross(base, self.y) {
+                    // Ticking if x isn't zero.
+                    self.bus.tick();
+                };
+                offset(base, self.y)
+            }
+            Mode::AbsoluteYForceTick => {
+                self.bus.tick();
+                offset(self.next_word(), self.y)
+            }
+            Mode::Indirect => {
+                let i = self.next_word();
+                self.bus
+                    .read_noncontinuous_word(i, high_byte(i) | (low_byte(i + 1)))
+            }
+            Mode::IndirectX => {
+                self.bus.tick();
+                println!("Running STA. Ticking bus. Current # cycles: {}", self.bus.cycles);
+                let i = offset(self.next_byte(), self.x);
+                println!("Running STA. Get next_byte. Current # cycles: {}", self.bus.cycles);
+                self.bus
+                    .read_noncontinuous_word(low_byte(i), low_byte(i + 1))
+            }
+            Mode::IndirectY => {
+                let i = self.next_byte();
+                let base = self
+                    .bus
+                    .read_noncontinuous_word(i, low_byte(i + 1).try_into().unwrap());
+                if cross(base, self.y) {
+                    self.bus.tick();
+                }
+                offset(base, self.y)
+            }
+            Mode::IndirectYForceTick => {
+                let i = self.next_byte();
+                let base = self
+                    .bus
+                    .read_noncontinuous_word(i, low_byte(i + 1).try_into().unwrap());
+                self.bus.tick();
+                offset(base, self.y)
+            }
+            Mode::NoMode => panic!("Mode:NoMode should never be used."),
+        }
+    }
+
+    fn read_operand(&mut self, mode: Mode) -> u8 {
+        let address = self.operand_address(mode);
+        println!("Running STA. Got operand address. Current # cycles: {}", self.bus.cycles);
+        self.bus.read_byte(address)
+    }
+
+    #[allow(dead_code)]
+    pub fn log_next_instructions(&mut self) {
+        let pc = self.pc;
+        let rom_offset = 15 + (self.pc % 0x4000); // TODO Need to figure out what this is. 
+        let opcode = self.bus.unclocked_read_byte(pc) as usize;
+        let mut output = String::new();
+        for i in 1..INSTRUCTION_SIZES[opcode] {
+            write!(&mut output, "{:02X} ", self.bus.unclocked_read_byte(pc + i)).expect("it to work");
+        }
+        println!(
+            "OFFSET:{:06X}\tPC:{:04X}\tA:{:02X}\tX:{:02X}\tY:{:02X}\tStatus:{:08b}\tTEST:{:02X}[{:02X}] {}\t{}",
+            rom_offset,
+            pc,
+            self.a,
+            self.x,
+            self.y,
+            self.status,
+            self.bus.unclocked_read_byte(0x6000),
+            opcode, 
+            INSTRUCTION_NAMES[opcode as usize],
+            output,
+        )
+    }
+
+    pub fn execute_next_instruction(&mut self) {
+        // if self.bus.nmi.ready() {
+        //     self.bus.nmi.acknowledge();
+        //     self.interrupt(Interrupt::Nmi)
+        // } else if self.bus.irq() && !self.get_flag(Flag::IrqDisable) {
+        //     self.interrupt(Interrupt::Irq)
+        // }
+
+        #[cfg(feature = "log")]
+        self.log_next_instruction();
+
+        let instruction = self.next_byte();
+        self.execute_instruction(instruction);
+    }
+    // #endregion
+    // https://www.masswerk.at/6502/6502_instruction_set.html
+    fn execute_instruction(&mut self, opcode: u8) {
+        match opcode {
+            // Loads
+            0xA1 => self.lda(Mode::IndirectX),
+            0xA5 => self.lda(Mode::ZeroPage),
+            0xA9 => self.lda(Mode::Immediate),
+            0xAD => self.lda(Mode::Absolute),
+            0xB1 => self.lda(Mode::IndirectY),
+            0xB5 => self.lda(Mode::ZeroPageX),
+            0xB9 => self.lda(Mode::AbsoluteY),
+            0xBD => self.lda(Mode::AbsoluteX),
+
+            0xA2 => self.ldx(Mode::Immediate),
+            0xA6 => self.ldx(Mode::ZeroPage),
+            0xAE => self.ldx(Mode::Absolute),
+            0xB6 => self.ldx(Mode::ZeroPageY),
+            0xBE => self.ldx(Mode::AbsoluteY),
+
+            0xA0 => self.ldy(Mode::Immediate),
+            0xA4 => self.ldy(Mode::ZeroPage),
+            0xAC => self.ldy(Mode::Absolute),
+            0xB4 => self.ldy(Mode::ZeroPageX),
+            0xBC => self.ldy(Mode::AbsoluteX),
+            
+            // Stores
+            0x81 => self.sta(Mode::IndirectX),
+
+
+
+
+            _ => println!("Opcode: 0x{:X} not implemented yet.", opcode)
+        }
+    }
+
+    // Loads
+    fn lda(&mut self, mode: Mode) {
+        let operand = self.read_operand(mode);
+        self.set_flags_zero_negative(operand);
+        self.a = operand
+    }
+
+    fn ldx(&mut self, mode: Mode) {
+        let operand = self.read_operand(mode);
+        self.set_flags_zero_negative(operand);
+        self.x = operand
+    }
+    fn ldy(&mut self, mode: Mode) {
+        let operand = self.read_operand(mode);
+        self.set_flags_zero_negative(operand);
+        self.y = operand
+    }
+
+    // Stores
+    fn sta(&mut self, mode: Mode) {
+        println!("Fetch Opcode, increment PC. Current # cycles: {}", self.bus.cycles);
+        let address = self.read_operand(mode);
+        println!("Fetch effective address Current # cycles: {}", self.bus.cycles);
+        let value = self.a;
+        self.bus.write_byte(address, value);
+        println!("Running STA. wrote byte. Current # cycles: {}", self.bus.cycles);
     }
 }
+
+// #region
+fn cross(base: u16, offset: u8) -> bool {
+    high_byte(base + offset as u16) != high_byte(base)
+}
+
+fn offset<T: Into<u16>>(base: T, offset: u8) -> u16 {
+    base.into() + offset as u16
+}
+
+fn high_byte<T: Into<u16>>(value: T) -> u16 {
+    value.into() & 0xFF00
+}
+
+fn low_byte<T: Into<u16>>(value: T) -> u16 {
+    value.into() & 0xFF
+}
+
+#[allow(dead_code)]
+fn bytes_to_word(low: u8, high: u8) -> u16 {
+    low as u16 | ((high as u16) << 8)
+}
+
+#[allow(dead_code)]
+fn word_to_bytes(value: u16) -> (u8, u8) {
+    ((value & 0xFF) as u8, ((value & 0xFF00) >> 8) as u8)
+}
+// #endregion
+
+// Copied from starrhorne
+// https://github.com/starrhorne/nes-rust/blob/master/src/cpu_test.rs
+#[cfg(test)]
+#[path = "./test/cpu_test.rs"]
+mod cpu_test;
