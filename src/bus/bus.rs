@@ -40,12 +40,13 @@ impl Interrupt {
 #[allow(dead_code)]
 pub struct Bus {
     pub ram: [u8; 2048],
-    // TODO add APU, PPU, Controller, Catridge,
+    // TODO add APU, PPU, Controller, Cartridge,
     pub cycles: u64,
     pub nmi: Interrupt,
     cpu_stall_cycles: usize,
 }
 
+#[allow(dead_code)]
 impl Bus {
     pub fn new() -> Self {
         Bus {
@@ -64,7 +65,7 @@ impl Bus {
         // TODO Handle ticking of apu/ppu
     }
 
-    // Public for debuging in cpu.
+    // Public for debugging in cpu.
     pub fn unclocked_read_byte(&mut self, address: u16) -> u8 {
         match address {
             0..=0x1FFF => return self.ram[address as usize % 0x0800],

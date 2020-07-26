@@ -58,6 +58,7 @@ macro_rules! test_op {
             let start_status = cpu.status;
             $(cpu.$sk=$sv;)*
             cpu.execute_next_instruction();
+            println!("Executing {} of type {}", $instruction, $mode);
             assert!(0 == cpu.status & start_status & !op.mask, "Register mask not respected. Status: 0b{:b}", cpu.status);
             if op.size > 0 {
                 assert!(op.size == (cpu.pc - start_pc), "Invalid instruction size. Expected: {} bytes, Got: {}", op.size, cpu.pc - start_pc);
@@ -120,13 +121,13 @@ fn test_ldy() {
 
 #[test]
 fn test_sta() {
-    // test_op!("sta", ZeroPage,  [0x02]{a: 0x66} => [0x02, 0x66]{});
-    // test_op!("sta", ZeroPageX, [0x02]{a: 0x66, x:1} => [0x02, 0, 0x66]{});
-    // test_op!("sta", Absolute,  [0x04, 0]{a:0x66} => [0x04, 0, 0, 0x66]{});
-    // test_op!("sta", AbsoluteX, [0x03, 0]{a:0x66, x:1} => [0x03, 0, 0, 0x66]{});
-    // test_op!("sta", AbsoluteY, [0x03, 0]{a:0x66, y:1} => [0x03, 0, 0, 0x66]{});
+    test_op!("sta", ZeroPage,  [0x02]{a: 0x66} => [0x02, 0x66]{});
+    test_op!("sta", ZeroPageX, [0x02]{a: 0x66, x:1} => [0x02, 0, 0x66]{});
+    test_op!("sta", Absolute,  [0x04, 0]{a:0x66} => [0x04, 0, 0, 0x66]{});
+    test_op!("sta", AbsoluteX, [0x03, 0]{a:0x66, x:1} => [0x03, 0, 0, 0x66]{});
+    test_op!("sta", AbsoluteY, [0x03, 0]{a:0x66, y:1} => [0x03, 0, 0, 0x66]{});
     test_op!("sta", IndirectX, [0x02, 0, 0x05, 0, 0]{a: 0x66, x:1} => [0x02, 0, 0x05, 0, 0x66]{});
-    // test_op!("sta", IndirectY, [0x02, 0x04, 0, 0, 0]{a: 0x66, y:1} => [0x02, 0x04, 0, 0, 0x66]{});
+    test_op!("sta", IndirectY, [0x02, 0x04, 0, 0, 0]{a: 0x66, y:1} => [0x02, 0x04, 0, 0, 0x66]{});
 }
 
 // #region
@@ -139,6 +140,7 @@ struct Op {
     mask: u8,
 }
 
+// # Cycles can be found here: http://nesdev.com/6502_cpu.txt
 fn opcode(name: &str, mode: Mode) -> Op {
     match (name, mode) {
         ("adc", Immediate) => Op {

@@ -2,6 +2,9 @@ use super::cpu_debug::{INSTRUCTION_NAMES, INSTRUCTION_SIZES};
 use crate::bus::bus::Bus;
 
 use std::fmt::Write;
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::fmt::Result;
 use std::convert::TryInto;
 #[allow(dead_code)]
 // #region
@@ -17,6 +20,7 @@ enum Flag {
 }
 
 #[allow(dead_code)]
+#[derive(Debug)]
 enum Mode {
     Immediate,
     ZeroPage,
@@ -32,6 +36,13 @@ enum Mode {
     IndirectY,
     IndirectYForceTick,
     NoMode,
+}
+
+#[allow(dead_code)] // TODO Remove after done Debugging
+impl Display for Mode {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 // TODO Implement Interrupts
@@ -189,9 +200,7 @@ impl CPU {
             }
             Mode::IndirectX => {
                 self.bus.tick();
-                println!("Running STA. Ticking bus. Current # cycles: {}", self.bus.cycles);
                 let i = offset(self.next_byte(), self.x);
-                println!("Running STA. Get next_byte. Current # cycles: {}", self.bus.cycles);
                 self.bus
                     .read_noncontinuous_word(low_byte(i), low_byte(i + 1))
             }
@@ -219,7 +228,6 @@ impl CPU {
 
     fn read_operand(&mut self, mode: Mode) -> u8 {
         let address = self.operand_address(mode);
-        println!("Running STA. Got operand address. Current # cycles: {}", self.bus.cycles);
         self.bus.read_byte(address)
     }
 
@@ -265,6 +273,7 @@ impl CPU {
     // https://www.masswerk.at/6502/6502_instruction_set.html
     fn execute_instruction(&mut self, opcode: u8) {
         match opcode {
+            // #region
             // Loads
             0xA1 => self.lda(Mode::IndirectX),
             0xA5 => self.lda(Mode::ZeroPage),
@@ -286,9 +295,19 @@ impl CPU {
             0xAC => self.ldy(Mode::Absolute),
             0xB4 => self.ldy(Mode::ZeroPageX),
             0xBC => self.ldy(Mode::AbsoluteX),
+            // #endregion
             
             // Stores
             0x81 => self.sta(Mode::IndirectX),
+            0x85 => self.sta(Mode::ZeroPage),
+            0x8D => self.sta(Mode::Absolute),
+            0x91 => self.sta(Mode::IndirectY),
+            0x95 => self.sta(Mode::ZeroPageX),
+            0x99 => self.sta(Mode::AbsoluteY),
+            0x9D => self.sta(Mode::AbsoluteX),
+
+
+
 
 
 
@@ -317,12 +336,10 @@ impl CPU {
 
     // Stores
     fn sta(&mut self, mode: Mode) {
-        println!("Fetch Opcode, increment PC. Current # cycles: {}", self.bus.cycles);
-        let address = self.read_operand(mode);
-        println!("Fetch effective address Current # cycles: {}", self.bus.cycles);
+
+        let address = self.operand_address(mode);
         let value = self.a;
         self.bus.write_byte(address, value);
-        println!("Running STA. wrote byte. Current # cycles: {}", self.bus.cycles);
     }
 }
 
