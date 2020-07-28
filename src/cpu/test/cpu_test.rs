@@ -45,6 +45,25 @@ macro_rules! build_cpu {
 //     }};
 // }
 
+// macro_rules! bit_convert {
+//     (carry, 1)          => 0b0000_0001;
+//     (zero, 1)           => 0b0000_0010;
+//     (irq_disable, 1)    => 0b0000_0100;
+//     (decimal, 1)        => 0b0000_1000;
+//     (break_flag, 1)     => 0b0001_0000;
+//     (push, 1)           => 0b0010_0000;
+//     (overflow, 1)       => 0b0100_0000;
+//     (negative, 1)       => 0b1000_0000;
+// }
+
+// macro_rules! status_convert {
+//     ({$($status_bit:ident: $value:expr)}) => {
+//         $(
+//             bit_convert!($status_bit, $value)
+//         )*
+//     };
+// }
+
 macro_rules! test_op {
     ($instruction:expr, $mode:ident, [$($b:expr),*]{$($sk:ident : $sv:expr),*} => [$($rb:expr),*]{$($ek:ident : $ev:expr),*}) => {
         {
@@ -56,7 +75,9 @@ macro_rules! test_op {
             let start_pc = cpu.pc;
             let start_cycles = cpu.bus.cycles;
             let start_status = cpu.status;
-            $(cpu.$sk=$sv;)*
+            $(
+                cpu.$sk=$sv;
+            )*
             cpu.execute_next_instruction();
             println!("Executing {} of type {}", $instruction, $mode);
             assert!(0 == cpu.status & start_status & !op.mask, "Register mask not respected. Status: 0b{:b}", cpu.status);
@@ -128,6 +149,37 @@ fn test_sta() {
     test_op!("sta", AbsoluteY, [0x03, 0]{a:0x66, y:1} => [0x03, 0, 0, 0x66]{});
     test_op!("sta", IndirectX, [0x02, 0, 0x05, 0, 0]{a: 0x66, x:1} => [0x02, 0, 0x05, 0, 0x66]{});
     test_op!("sta", IndirectY, [0x02, 0x04, 0, 0, 0]{a: 0x66, y:1} => [0x02, 0x04, 0, 0, 0x66]{});
+
+    // register_convert!({carry: 1})
+}
+
+#[test]
+fn test_stx() {
+    test_op!("stx", ZeroPage,  [0x02]{x: 0x66} => [0x02, 0x66]{});
+    test_op!("stx", ZeroPageY, [0x02]{x: 0x66, y:1} => [0x02, 0, 0x66]{});
+    test_op!("stx", Absolute,  [0x04, 0]{x: 0x66} => [0x04, 0, 0, 0x66]{});
+}
+
+#[test]
+fn test_sty() {
+    test_op!("sty", ZeroPage,  [0x02]{y: 0x66} => [0x02, 0x66]{});
+    test_op!("sty", ZeroPageX, [0x02]{y: 0x66, x:1} => [0x02, 0, 0x66]{});
+    test_op!("sty", Absolute,  [0x04, 0]{y: 0x66} => [0x04, 0, 0, 0x66]{});
+}
+
+#[test]
+fn test_adc() {
+    test_op!("adc", Immediate, [3]{a:2, status:1}                   => []{ a: 6 });
+    test_op!("adc", Immediate, [255]{a:1, status:0}                 => []{ a: 0, status: 0b00000011 });
+    test_op!("adc", Immediate, [127]{a:1, status:0}                 => []{ a: 128, status: 0b11000000 });
+    test_op!("adc", Immediate, [200]{a:100}                         => []{ a: 44 });
+    test_op!("adc", ZeroPage,  [0x02, 0x90]{a: 1}                   => []{ a: 0x91 });
+    test_op!("adc", ZeroPageX, [0x02, 0, 0x90]{x:1, a: 1}           => []{ a: 0x91 });
+    test_op!("adc", Absolute,  [0x04, 0, 0, 0x90]{a:1}              => []{ a: 0x91 });
+    test_op!("adc", AbsoluteX, [0x03, 0, 0, 0x90]{x:1, a: 1}        => []{ a: 0x91 });
+    test_op!("adc", AbsoluteY, [0x03, 0, 0, 0x90]{y:1, a: 1}        => []{ a: 0x91 });
+    test_op!("adc", IndirectX, [0x02, 0, 0x05, 0, 0x90]{x:1, a: 1}  => []{ a: 0x91 });
+    test_op!("adc", IndirectY, [0x02, 0x04, 0, 0, 0x90]{y:1, a: 1}  => []{ a: 0x91 });
 }
 
 // #region

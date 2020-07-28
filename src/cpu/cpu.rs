@@ -295,22 +295,35 @@ impl CPU {
             0xAC => self.ldy(Mode::Absolute),
             0xB4 => self.ldy(Mode::ZeroPageX),
             0xBC => self.ldy(Mode::AbsoluteX),
-            // #endregion
             
             // Stores
             0x81 => self.sta(Mode::IndirectX),
             0x85 => self.sta(Mode::ZeroPage),
             0x8D => self.sta(Mode::Absolute),
-            0x91 => self.sta(Mode::IndirectY),
+            0x91 => self.sta(Mode::IndirectYForceTick),// Fix the high byte of effective address.
             0x95 => self.sta(Mode::ZeroPageX),
-            0x99 => self.sta(Mode::AbsoluteY),
-            0x9D => self.sta(Mode::AbsoluteX),
+            0x99 => self.sta(Mode::AbsoluteYForceTick),// Fix the high byte of effective address.
+            0x9D => self.sta(Mode::AbsoluteXForceTick), // Fix the high byte of effective address.
 
+            0x86 => self.stx(Mode::ZeroPage),
+            0x8E => self.stx(Mode::Absolute),
+            0x96 => self.stx(Mode::ZeroPageY),
 
+            0x84 => self.sty(Mode::ZeroPage),
+            0x8C => self.sty(Mode::Absolute),
+            0x94 => self.sty(Mode::ZeroPageX),
+            // #endregion
 
-
-
-
+            // Add 
+            0x61 => self.adc(Mode::IndirectX),
+            0x65 => self.adc(Mode::ZeroPage),
+            0x69 => self.adc(Mode::Immediate),
+            0x6D => self.adc(Mode::Absolute),
+            0x71 => self.adc(Mode::IndirectY),
+            0x75 => self.adc(Mode::ZeroPageX),
+            0x79 => self.adc(Mode::AbsoluteY),
+            0x7D => self.adc(Mode::AbsoluteX),
+            
 
             _ => println!("Opcode: 0x{:X} not implemented yet.", opcode)
         }
@@ -336,14 +349,39 @@ impl CPU {
 
     // Stores
     fn sta(&mut self, mode: Mode) {
-
         let address = self.operand_address(mode);
         let value = self.a;
         self.bus.write_byte(address, value);
     }
+
+    fn stx(&mut self, mode: Mode) {
+        let address = self.operand_address(mode);
+        let value = self.x;
+        self.bus.write_byte(address, value);
+    }
+
+    fn sty(&mut self, mode: Mode) {
+        let address = self.operand_address(mode);
+        let value = self.y;
+        self.bus.write_byte(address, value);
+    }
+
+    fn adc(&mut self, mode: Mode) {
+        let accumulator = self.a as u8;
+        let carry = self.get_flag(Flag::Carry) as u8;
+        let accumulator_carry = accumulator.wrapping_add(carry);
+        let memory = self.read_operand(mode) as u8;
+        let result = (memory as u16).wrapping_add(accumulator_carry as u16);
+        self.set_flags_carry_overflow(memory, accumulator_carry, result);
+        self.set_flags_zero_negative(result as u8);
+        self.a = result as u8;
+    }
+
+    
 }
 
 // #region
+// Calculates if there's a page cross. 
 fn cross(base: u16, offset: u8) -> bool {
     high_byte(base + offset as u16) != high_byte(base)
 }
