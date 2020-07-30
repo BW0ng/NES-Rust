@@ -101,9 +101,8 @@ macro_rules! test_op {
         }
     }
 }
-// #endregion
 
-// test_op!("opcode", <Addressing type> , [memory]{registers} => { registers})
+// test_op!("opcode", <Addressing type> , [memory]{registers} => {registers})
 #[test]
 fn test_lda() {
     test_op!("lda", Immediate, [0x00]{}                         => []{ a: 0x00, status: 0b00000010 });
@@ -149,8 +148,6 @@ fn test_sta() {
     test_op!("sta", AbsoluteY, [0x03, 0]{a:0x66, y:1} => [0x03, 0, 0, 0x66]{});
     test_op!("sta", IndirectX, [0x02, 0, 0x05, 0, 0]{a: 0x66, x:1} => [0x02, 0, 0x05, 0, 0x66]{});
     test_op!("sta", IndirectY, [0x02, 0x04, 0, 0, 0]{a: 0x66, y:1} => [0x02, 0x04, 0, 0, 0x66]{});
-
-    // register_convert!({carry: 1})
 }
 
 #[test]
@@ -181,6 +178,60 @@ fn test_adc() {
     test_op!("adc", IndirectX, [0x02, 0, 0x05, 0, 0x90]{x:1, a: 1}  => []{ a: 0x91 });
     test_op!("adc", IndirectY, [0x02, 0x04, 0, 0, 0x90]{y:1, a: 1}  => []{ a: 0x91 });
 }
+// #endregion
+
+/**
+ *
+7  bit  0
+---- ----
+NVss DIZC
+|||| ||||
+|||| |||+- Carry
+|||| ||+-- Zero
+|||| |+--- Interrupt Disable
+|||| +---- Decimal
+||++------ No CPU effect, see: the B flag
+|+-------- Overflow
++--------- Negative
+ */
+#[test]
+fn test_sbc() {
+    test_op!("sbc", Immediate, [2]{a:10, status:1} => []{ a: 8 });
+    test_op!("sbc", Immediate, [2]{a:10, status:0} => []{ a: 7 });
+    test_op!("sbc", Immediate, [176]{a:80, status:1} => []{ a: 160, status: 0b11000000 });
+    test_op!("sbc", ZeroPage,  [0x02, 0x90]{a: 0xFF, status: 1} => []{ a: 0x6f });
+    test_op!("sbc", ZeroPageX, [0x02, 0, 0x90]{x:1, a: 0xFF, status: 1} => []{ a: 0x6f });
+    test_op!("sbc", Absolute,  [0x04, 0, 0, 0x90]{a:0xFF, status: 1} => []{ a: 0x6f });
+    test_op!("sbc", AbsoluteX, [0x03, 0, 0, 0x90]{x:1, a: 0xFF, status: 1} => []{ a: 0x6f });
+    test_op!("sbc", AbsoluteY, [0x03, 0, 0, 0x90]{y:1, a: 0xFF, status: 1} => []{ a: 0x6f });
+    test_op!("sbc", IndirectX, [0x02, 0, 0x05, 0, 0x90]{x:1, a: 0xFF, status: 1} => []{ a: 0x6f });
+    test_op!("sbc", IndirectY, [0x02, 0x04, 0, 0, 0x90]{y:1, a: 0xFF, status: 1} => []{ a: 0x6f });
+}
+
+#[test]
+fn test_and() {
+    test_op!("and", Immediate, [0b00001111]{a:0b01010101} => []{ a: 0b00000101, status: 0 });
+    test_op!("and", Immediate, [0b10001111]{a:0b11010101} => []{ a: 0b10000101, status: 0b10000000 });
+    test_op!("and", Immediate, [0]{a:0b11010101} => []{ a: 0, status: 0b00000010 });
+    test_op!("and", ZeroPage,  [0x02, 0xFF]{a: 0xF0} => []{a: 0xF0});
+    test_op!("and", ZeroPageX, [0x02, 0, 0xFF]{x:1, a: 0xF0} => []{a: 0xF0});
+    test_op!("and", Absolute,  [0x04, 0, 0, 0xFF]{a:0xF0} => []{a: 0xF0});
+    test_op!("and", AbsoluteX, [0x03, 0, 0, 0xFF]{x:1, a: 0xF0} => []{a: 0xF0});
+    test_op!("and", AbsoluteY, [0x03, 0, 0, 0xFF]{y:1, a: 0xF0} => []{a: 0xF0});
+    test_op!("and", IndirectX, [0x02, 0, 0x05, 0, 0xFF]{x:1, a: 0xF0} => []{a: 0xF0});
+    test_op!("and", IndirectY, [0x02, 0x04, 0, 0, 0xFF]{y:1, a: 0xF0} => []{a: 0xF0});
+}
+
+#[test]
+fn test_asl() {
+    test_op!("asl", ZeroPage,  [0x02, 0xFF]{status:1} => [0x02, 0xFE]{status: 0b10000001});
+    test_op!("asl", ZeroPage,  [0x02, 0xFF]{status:0} => [0x02, 0xFE]{status: 0b10000001});
+    test_op!("asl", ZeroPage,  [0x02, 0b10000000]{} => [0x02, 0]{status: 0b00000011});
+    test_op!("asl", ZeroPageX, [0x02, 0, 1]{x: 1} => [0x02, 0, 2]{});
+    test_op!("asl", Absolute,  [0x03, 0, 1]{} => [0x03, 0, 2]{});
+    test_op!("asl", AbsoluteX, [0x03, 0, 0, 1]{x: 1} => [0x03, 0, 0, 2]{});
+    test_op!("asl", NoMode, []{a: 1} => []{a: 2});
+}
 
 // #region
 #[derive(Debug)]
@@ -192,7 +243,7 @@ struct Op {
     mask: u8,
 }
 
-// # Cycles can be found here: http://nesdev.com/6502_cpu.txt
+// # Cycles can be found here: httstatus://nesdev.com/6502_cpu.txt
 fn opcode(name: &str, mode: Mode) -> Op {
     match (name, mode) {
         ("adc", Immediate) => Op {

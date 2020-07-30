@@ -171,7 +171,7 @@ impl CPU {
             Mode::Absolute => self.next_word(),
             Mode::AbsoluteX => {
                 let base = self.next_word();
-                if cross(base, self.x) {
+                if cross_page(base, self.x) {
                     // Ticking if x isn't zero.
                     self.bus.tick();
                 };
@@ -183,7 +183,7 @@ impl CPU {
             }
             Mode::AbsoluteY => {
                 let base = self.next_word();
-                if cross(base, self.y) {
+                if cross_page(base, self.y) {
                     // Ticking if x isn't zero.
                     self.bus.tick();
                 };
@@ -209,7 +209,7 @@ impl CPU {
                 let base = self
                     .bus
                     .read_noncontinuous_word(i, low_byte(i + 1).try_into().unwrap());
-                if cross(base, self.y) {
+                if cross_page(base, self.y) {
                     self.bus.tick();
                 }
                 offset(base, self.y)
@@ -323,6 +323,37 @@ impl CPU {
             0x75 => self.adc(Mode::ZeroPageX),
             0x79 => self.adc(Mode::AbsoluteY),
             0x7D => self.adc(Mode::AbsoluteX),
+
+            // SBC - Subtract
+            0xE1 => self.sbc(Mode::IndirectX),
+            0xE5 => self.sbc(Mode::ZeroPage),
+            0xE9 => self.sbc(Mode::Immediate),
+            0xED => self.sbc(Mode::Absolute),
+            0xF1 => self.sbc(Mode::IndirectY),
+            0xF5 => self.sbc(Mode::ZeroPageX),
+            0xF9 => self.sbc(Mode::AbsoluteY),
+            0xFD => self.sbc(Mode::AbsoluteX),
+            
+
+
+            // AND
+            0x21 => self.and(Mode::IndirectX),
+            0x25 => self.and(Mode::ZeroPage),
+            0x29 => self.and(Mode::Immediate),
+            0x2D => self.and(Mode::Absolute),
+            0x31 => self.and(Mode::IndirectY),
+            0x35 => self.and(Mode::ZeroPageX),
+            0x39 => self.and(Mode::AbsoluteY),
+            0x3D => self.and(Mode::AbsoluteX),
+
+            // ASL - Shift left one Bit
+            0x06 => self.asl(Mode::ZeroPage),
+            0x0A => self.asl_a(),
+            0x0E => self.asl(Mode::Absolute),
+            0x16 => self.asl(Mode::ZeroPageX),
+            0x1E => self.asl(Mode::AbsoluteXForceTick),
+
+
             
 
             _ => println!("Opcode: 0x{:X} not implemented yet.", opcode)
@@ -341,6 +372,7 @@ impl CPU {
         self.set_flags_zero_negative(operand);
         self.x = operand
     }
+
     fn ldy(&mut self, mode: Mode) {
         let operand = self.read_operand(mode);
         self.set_flags_zero_negative(operand);
@@ -377,12 +409,51 @@ impl CPU {
         self.a = result as u8;
     }
 
+    // A - M - !C
+    fn sbc(&mut self, mode: Mode) {
+        let accumulator = self.a;
+        let memory = !self.read_operand(mode); // Ones complement
+        let carry = self.get_flag(Flag::Carry) as u16; // Borrow for ones complement -> two's complement
+        let value = accumulator as u16 + memory as u16 + carry;
+
+        self.set_flags_zero_negative(value as u8);
+        self.set_flags_carry_overflow(accumulator, memory, value);
+        self.a = value as u8;
+    }
+
+    fn and(&mut self, mode: Mode) {
+        let accumulator = self.a as u8;
+        let memory = self.read_operand(mode) as u8;
+        let value = accumulator & memory;
+        self.set_flags_zero_negative(value);
+        self.a = value
+    }
+
+    fn asl(&mut self, mode: Mode) {
+        let address = self.operand_address(mode);
+        let memory = self.bus.read_byte(address);
+        self.set_flag(Flag::Carry, memory & 0x80 != 0);
+        self.bus.tick();
+        let value = memory << 1;
+        self.set_flags_zero_negative(value);
+        self.bus.write_byte(address, value);
+    }
+
+    fn asl_a(&mut self) {
+        let accumulator = self.a;
+        self.set_flag(Flag::Carry, accumulator & 0x80 != 0);
+        let value = accumulator << 1;
+        self.set_flags_zero_negative(value);
+        self.a = value;
+        self.bus.tick();
+    }
+
     
 }
 
 // #region
-// Calculates if there's a page cross. 
-fn cross(base: u16, offset: u8) -> bool {
+// Calculates if there's a page cross_page. 
+fn cross_page(base: u16, offset: u8) -> bool {
     high_byte(base + offset as u16) != high_byte(base)
 }
 
